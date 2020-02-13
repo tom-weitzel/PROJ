@@ -25,17 +25,19 @@ check_include_files("stdlib.h;stdarg.h;string.h;float.h" STDC_HEADERS)
 
 check_function_exists(localeconv HAVE_LOCALECONV)
 check_function_exists(strerror HAVE_STRERROR)
-
-# check libm need on unix
-check_library_exists(m ceil "" HAVE_LIBM)
+if(NOT WIN32)
+    check_library_exists(dl dladdr "" HAVE_LIBDL)
+    # check libm need on unix
+    check_library_exists(m ceil "" HAVE_LIBM)
+endif()
 
 set(PACKAGE "proj")
 set(PACKAGE_BUGREPORT "https://github.com/OSGeo/PROJ/issues")
 set(PACKAGE_NAME "PROJ")
-set(PACKAGE_STRING "PROJ ${${PROJECT_INTERN_NAME}_VERSION}")
+set(PACKAGE_STRING "PROJ ${${PROJECT_NAME}_VERSION}")
 set(PACKAGE_TARNAME "proj")
 set(PACKAGE_URL "https://proj.org")
-set(PACKAGE_VERSION "${${PROJECT_INTERN_NAME}_VERSION}")
+set(PACKAGE_VERSION "${${PROJECT_NAME}_VERSION}")
 
 # check if a second proj_config.h exists (created by ./configure)
 # as this is within CMake's C_INCLUDES / CXX_INCLUDES

@@ -1298,12 +1298,10 @@ TEST_F(CApi, proj_coordoperation_get_grid_used) {
     ASSERT_NE(fullName, nullptr);
     ASSERT_NE(packageName, nullptr);
     ASSERT_NE(url, nullptr);
-    EXPECT_EQ(shortName, std::string("ntv1_can.dat"));
+    EXPECT_EQ(shortName, std::string("ca_nrc_ntv1_can.tif"));
     // EXPECT_EQ(fullName, std::string(""));
-    EXPECT_EQ(packageName, std::string("proj-datumgrid"));
-    EXPECT_TRUE(std::string(url).find(
-                    "https://download.osgeo.org/proj/proj-datumgrid-") == 0)
-        << std::string(url);
+    EXPECT_EQ(packageName, std::string(""));
+    EXPECT_EQ(std::string(url), "https://cdn.proj.org/ca_nrc_ntv1_can.tif");
     EXPECT_EQ(directDownload, 1);
     EXPECT_EQ(openLicense, 1);
 }
@@ -1668,7 +1666,7 @@ TEST_F(CApi, proj_create_from_name) {
                                          false, 0, nullptr);
         ASSERT_NE(res, nullptr);
         ObjListKeeper keeper_res(res);
-        EXPECT_EQ(proj_list_get_count(res), 4);
+        EXPECT_EQ(proj_list_get_count(res), 5);
     }
     {
         auto res = proj_create_from_name(m_ctxt, "xx", "WGS 84", nullptr, 0,
@@ -3105,8 +3103,8 @@ TEST_F(CApi, proj_grid_get_info_from_database) {
     }
     {
         EXPECT_TRUE(proj_grid_get_info_from_database(
-            m_ctxt, "GDA94_GDA2020_conformal.gsb", nullptr, nullptr, nullptr,
-            nullptr, nullptr, nullptr));
+            m_ctxt, "au_icsm_GDA94_GDA2020_conformal.tif", nullptr, nullptr,
+            nullptr, nullptr, nullptr, nullptr));
     }
     {
         const char *name = nullptr;
@@ -3116,8 +3114,8 @@ TEST_F(CApi, proj_grid_get_info_from_database) {
         int open_license = 0;
         int available = 0;
         EXPECT_TRUE(proj_grid_get_info_from_database(
-            m_ctxt, "GDA94_GDA2020_conformal.gsb", &name, &package_name, &url,
-            &direct_download, &open_license, &available));
+            m_ctxt, "au_icsm_GDA94_GDA2020_conformal.tif", &name, &package_name,
+            &url, &direct_download, &open_license, &available));
         ASSERT_NE(name, nullptr);
         ASSERT_NE(package_name, nullptr);
         ASSERT_NE(url, nullptr);
@@ -3333,9 +3331,11 @@ TEST_F(CApi, proj_get_crs_info_list_from_database) {
         ASSERT_NE(list, nullptr);
         EXPECT_GT(result_count, 1);
         for (int i = 0; i < result_count; i++) {
-            EXPECT_LE(list[i]->west_lon_degree, params->west_lon_degree);
+            if (list[i]->west_lon_degree < list[i]->east_lon_degree) {
+                EXPECT_LE(list[i]->west_lon_degree, params->west_lon_degree);
+                EXPECT_GE(list[i]->east_lon_degree, params->east_lon_degree);
+            }
             EXPECT_LE(list[i]->south_lat_degree, params->south_lat_degree);
-            EXPECT_GE(list[i]->east_lon_degree, params->east_lon_degree);
             EXPECT_GE(list[i]->north_lat_degree, params->north_lat_degree);
         }
         proj_get_crs_list_parameters_destroy(params);
@@ -3360,9 +3360,11 @@ TEST_F(CApi, proj_get_crs_info_list_from_database) {
         ASSERT_NE(list, nullptr);
         EXPECT_GT(result_count, 1);
         for (int i = 0; i < result_count; i++) {
-            EXPECT_LE(list[i]->west_lon_degree, params->east_lon_degree);
+            if (list[i]->west_lon_degree < list[i]->east_lon_degree) {
+                EXPECT_LE(list[i]->west_lon_degree, params->west_lon_degree);
+                EXPECT_GE(list[i]->east_lon_degree, params->east_lon_degree);
+            }
             EXPECT_LE(list[i]->south_lat_degree, params->north_lat_degree);
-            EXPECT_GE(list[i]->east_lon_degree, params->west_lon_degree);
             EXPECT_GE(list[i]->north_lat_degree, params->south_lat_degree);
         }
         proj_get_crs_list_parameters_destroy(params);
@@ -4463,6 +4465,27 @@ TEST_F(CApi, proj_create_derived_geographic_crs) {
     EXPECT_EQ(proj_5, std::string("+proj=ob_tran +o_proj=longlat +o_lon_p=-4 "
                                   "+o_lat_p=-2 +lon_0=3 +datum=WGS84 +no_defs "
                                   "+type=crs"));
+}
+
+// ---------------------------------------------------------------------------
+
+TEST_F(CApi, proj_context_set_sqlite3_vfs_name) {
+
+    PJ_CONTEXT *ctx = proj_context_create();
+    proj_log_func(ctx, nullptr, [](void *, int, const char *) -> void {});
+
+    // Set a dummy VFS and check it is taken into account
+    // (failure to open proj.db)
+    proj_context_set_sqlite3_vfs_name(ctx, "dummy_vfs_name");
+    ASSERT_EQ(proj_create(ctx, "EPSG:4326"), nullptr);
+
+    // Restore default VFS
+    proj_context_set_sqlite3_vfs_name(ctx, nullptr);
+    PJ *crs_4326 = proj_create(ctx, "EPSG:4326");
+    ASSERT_NE(crs_4326, nullptr);
+    proj_destroy(crs_4326);
+
+    proj_context_destroy(ctx);
 }
 
 // ---------------------------------------------------------------------------

@@ -2,8 +2,11 @@
 # files containing dictionary of useful projection
 #
 
+set(CONFIG_FILES
+  proj.ini
+)
+
 set(PROJ_DICTIONARY
-  null
   world
   other.extra
   nad27
@@ -54,7 +57,7 @@ add_custom_command(
 add_custom_target(generate_proj_db ALL DEPENDS ${PROJ_DB})
 
 if(NOT "${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
-  foreach(FILE ${PROJ_DICTIONARY} ${GRIDSHIFT_FILES})
+  foreach(FILE ${CONFIG_FILES} ${PROJ_DICTIONARY} ${GRIDSHIFT_FILES})
     configure_file(${FILE} ${FILE} COPYONLY)
   endforeach()
 endif()
@@ -64,7 +67,6 @@ endif()
 # Note: this is done at configure/cmake time, not build time.
 # So if you install new grids in the source data/ subdirectory, run cmake again
 set(DATA_FOR_TESTS
-    null
     GL27
     nad27
     nad83
@@ -78,18 +80,25 @@ set(DATA_FOR_TESTS
     nzgd2kgrid0005.gsb
     ITRF2000
     BETA2007.gsb)
+file(GLOB DATA_TESTS tests/*)
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/for_tests)
-foreach(FILE ${DATA_FOR_TESTS})
+execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/for_tests/tests)
+foreach(FILE ${DATA_FOR_TESTS} ${CONFIG_FILES})
     if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${FILE})
         configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${FILE} ${CMAKE_CURRENT_BINARY_DIR}/for_tests/${FILE} COPYONLY)
     endif()
+endforeach()
+foreach(FILE ${DATA_TESTS})
+    get_filename_component(FILENAME ${FILE} NAME)
+    configure_file(${FILE} ${CMAKE_CURRENT_BINARY_DIR}/for_tests/tests/${FILENAME} COPYONLY)
 endforeach()
 
 #
 #install
 #
 set(ALL_DATA_FILE
+  ${CONFIG_FILES}
   ${PROJ_DICTIONARY}
   ${GRIDSHIFT_FILES}
   ${PROJ_DB}

@@ -91,10 +91,6 @@ The following control parameters can appear in any order:
 
     List of all distance units that can be selected with the *+units* parameter.
 
-.. option:: -ld
-
-    List of datums that can be selected with the *+datum* parameter.
-
 .. option:: -r
 
     This options reverses the order of the expected input from
@@ -175,6 +171,16 @@ normally be in DMS format (use ``-f %.12f`` for decimal degrees with 12 decimal
 places), while projected (cartesian) coordinates will be in linear
 (meter, feet) units.
 
+Use of remote grids
+-------------------
+
+.. versionadded:: 7.0.0
+
+If the :envvar:`PROJ_NETWORK` environment variable is set to ``ON``,
+:program:`cs2cs` will attempt to use remote grids stored on CDN (Content
+Delivery Network) storage, when they are not available locally.
+
+More details are available in the :ref:`network` section.
 
 Examples
 ********
@@ -224,7 +230,7 @@ outputs
     See also
     ********
 
-    **proj(1)**, **cct(1)**, **geod(1)**, **gie(1)**, **projinfo(1)**
+    **proj(1)**, **cct(1)**, **geod(1)**, **gie(1)**, **projinfo(1)**, **projsync(1)**
 
     Bugs
     ****

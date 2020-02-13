@@ -442,9 +442,21 @@ Test bugfix of https://github.com/OSGeo/proj.4/issues/1002
 -------------------------------------------------------------------------------
 operation   +proj=latlong +ellps=WGS84 +geoidgrids=tests/test_nodata.gtx
 -------------------------------------------------------------------------------
-ignore      pjd_err_failed_to_load_grid
 accept      4.05        52.1        0
 expect      4.05        52.1        -10
+-------------------------------------------------------------------------------
+
+-------------------------------------------------------------------------------
+Test null grid with vgridshift
+-------------------------------------------------------------------------------
+operation   proj=vgridshift  grids=tests/test_nodata.gtx,null  ellps=GRS80
+-------------------------------------------------------------------------------
+accept      4.05        52.1        0
+expect      4.05        52.1        -10
+
+# Outside validity area of test_nodata.gtx. Fallback on null
+accept      4.05        -52.1        0
+expect      4.05        -52.1        0
 -------------------------------------------------------------------------------
 
 -------------------------------------------------------------------------------
@@ -523,5 +535,23 @@ in the creation of a PJ object.
 -------------------------------------------------------------------------------
 operation   this is a bogus CRS meant to trigger a generic error in proj_create()
 expect      failure   errno generic error
+
+-------------------------------------------------------------------------------
+Test proj=set
+-------------------------------------------------------------------------------
+
+operation   +proj=set
+accept      1 2 3 4
+expect      1 2 3 4
+roundtrip   1
+
+operation   +proj=set +v_1=10 +v_2=20 +v_3=30 +v_4=40
+accept      1 2 3 4
+expect      10 20 30 40
+
+operation   +proj=set +v_1=10 +v_2=20 +v_3=30 +v_4=40
+direction   inverse
+accept      1 2 3 4
+expect      10 20 30 40
 
 </gie>

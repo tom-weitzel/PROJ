@@ -16,17 +16,18 @@ Synopsis
 ********
 
     | **projinfo**
-    |    [-o formats] [-k crs|operation|ellipsoid] [--summary] [-q]
+    |    [-o formats] [-k crs|operation|datum|ellipsoid] [--summary] [-q]
     |    [[--area name_or_code] | [--bbox west_long,south_lat,east_long,north_lat]]
     |    [--spatial-test contains|intersects]
     |    [--crs-extent-use none|both|intersection|smallest]
-    |    [--grid-check none|discard_missing|sort] [--show-superseded]
+    |    [--grid-check none|discard_missing|sort|known_available] [--show-superseded]
     |    [--pivot-crs always|if_no_direct_transformation|never|{auth:code[,auth:code]*}]
     |    [--boundcrs-to-wgs84]
     |    [--main-db-path path] [--aux-db-path path]*
     |    [--identify] [--3d]
     |    [--c-ify] [--single-line]
-    |    {object_definition} | {object_reference} | (-s {srs_def} -t {srs_def})
+    |    --searchpaths | --remote-data | {object_definition} |
+    |    {object_reference} | (-s {srs_def} -t {srs_def})
     |
 
     where {object_definition} or {srs_def} is
@@ -80,7 +81,7 @@ The following control parameters can appear in any order:
     .. note:: Before PROJ 6.3.0, WKT1:GDAL was implicitly calling --boundcrs-to-wgs84.
               This is no longer the case.
 
-.. option:: -k crs|operation|ellipsoid
+.. option:: -k crs|operation|datum|ellipsoid
 
     When used to query a single object with a AUTHORITY:CODE, determines the (k)ind of the object
     in case there are CRS, coordinate operations or ellipsoids with the same CODE.
@@ -151,12 +152,13 @@ The following control parameters can appear in any order:
 
     .. note:: only used for coordinate operation computation
 
-.. option:: --grid-check none|discard_missing|sort
+.. option:: --grid-check none|discard_missing|sort|known_available
 
     Specify how the presence or absence of a horizontal or vertical shift grid
     required for a coordinate operation affects the results returned when
     researching coordinate operations between 2 CRS.
-    The default strategy is ``sort``: in that case, all candidate
+    The default strategy is ``sort`` (if :envvar:`PROJ_NETWORK` is not defined).
+    In that case, all candidate
     operations are returned, but the actual availability of the grids is used
     to determine the sorting order. That is, if a coordinate operation involves
     using a grid that is not available in the PROJ resource directories
@@ -166,6 +168,9 @@ The following control parameters can appear in any order:
     this returns the results as if all the grids where available.
     The ``discard_missing`` strategy discards results that involve grids not
     present in the PROJ resource directories.
+    The ``known_available`` strategy discards results that involve grids not
+    present in the PROJ resource directories and that are not known of the CDN.
+    This is the default strategy is :envvar:`PROJ_NETWORK` is set to ``ON``.
 
     .. note:: only used for coordinate operation computation
 
@@ -243,6 +248,21 @@ The following control parameters can appear in any order:
 
     Output WKT or PROJJSON strings on a single line, instead of multiple intended lines by
     default.
+
+.. option:: --searchpaths
+
+    .. versionadded:: 7.0
+
+    Output the directories into which PROJ resources will be looked for
+    (if not using C API such as :cpp:func:`proj_context_set_search_paths`
+    that will override them.
+
+.. option:: --remote-data
+
+    .. versionadded:: 7.0
+
+    Display information regarding if :ref:`network` is enabled, and the
+    related URL.
 
 Examples
 ********
@@ -396,7 +416,7 @@ Output:
     See also
     ********
 
-    **cs2cs(1)**, **cct(1)**, **geod(1)**, **gie(1)**, **proj(1)**
+    **cs2cs(1)**, **cct(1)**, **geod(1)**, **gie(1)**, **proj(1)**, **projsync(1)**
 
     Bugs
     ****

@@ -18,7 +18,7 @@ Synopsis
 Description
 ***********
 
-:program:`cct` a 4D equivalent to the :program:`proj` projection program,
+:program:`cct` is a 4D equivalent to the :program:`proj` projection program,
 performs transformation coordinate systems on a set of input points. The
 coordinate system transformation can include translation between projected
 and geographic coordinates as well as the application of datum shifts.
@@ -90,6 +90,17 @@ cartesian coordinates) and
 
 *Coordinate Transformations*, which are coordinate operations where
 input and output datums differ (e.g. change of reference frame).
+
+Use of remote grids
+*******************
+
+.. versionadded:: 7.0.0
+
+If the :envvar:`PROJ_NETWORK` environment variable is set to ``ON``,
+:program:`cct` will attempt to use remote grids stored on CDN (Content
+Delivery Network) storage, when they are not available locally.
+
+More details are available in the :ref:`network` section.
 
 Examples
 ********
@@ -179,7 +190,7 @@ Hence, in honour of *cct* (the geodesist) this is :program:`cct` (the program).
     See also
     ********
 
-    **proj(1)**, **cs2cs(1)**, **geod(1)**, **gie(1)**, **projinfo(1)**
+    **proj(1)**, **cs2cs(1)**, **geod(1)**, **gie(1)**, **projinfo(1)**, **projsync(1)**
 
     Bugs
     ****

@@ -155,6 +155,52 @@ echo 'Testing -s "GDA2020" -t "AHD height" --grid-check none -o PROJ --spatial-t
 $EXE -s "GDA2020" -t "AHD height" --grid-check none -o PROJ --spatial-test intersects >>${OUT} 2>&1
 echo "" >>${OUT}
 
+echo 'Testing -k ellipsoid WGS84' >> ${OUT}
+$EXE -k ellipsoid WGS84 >>${OUT} 2>&1
+echo "" >>${OUT}
+
+echo 'Testing -k ellipsoid EPSG:7030' >> ${OUT}
+$EXE -k ellipsoid EPSG:7030 >>${OUT} 2>&1
+echo "" >>${OUT}
+
+echo 'Testing -k datum WGS84' >> ${OUT}
+$EXE -k datum WGS84 >>${OUT} 2>&1
+echo "" >>${OUT}
+
+echo 'Testing -k datum EPSG:6326' >> ${OUT}
+$EXE -k datum EPSG:6326 >>${OUT} 2>&1
+echo "" >>${OUT}
+
+echo 'Testing -k operation EPSG:8457 -o PROJ -q' >> ${OUT}
+$EXE -k operation EPSG:8457 -o PROJ -q >>${OUT} 2>&1
+echo "" >>${OUT}
+
+# Testing --searchpaths
+if ! $EXE --searchpaths > testprojinfo_out_searchpaths.txt; then
+    echo "--searchpaths failed"
+    exit 100
+fi
+# Hard to test content of testprojinfo_out_searchpaths.txt
+rm testprojinfo_out_searchpaths.txt
+
+# Testing --remote-data
+if ! $EXE --remote-data > testprojinfo_out_remotedata.txt; then
+    echo "--remote-data failed"
+    exit 100
+fi
+# Hard to test content of testprojinfo_out_remotedata.txt
+rm testprojinfo_out_remotedata.txt
+
+# Testing --remote-data
+export PROJ_NETWORK=ON
+if ! $EXE --remote-data > testprojinfo_out_remotedata.txt; then
+    echo "--remote-data failed"
+    exit 100
+fi
+# Hard to test content of testprojinfo_out_remotedata.txt
+rm testprojinfo_out_remotedata.txt
+unset PROJ_NETWORK
+
 # do 'diff' with distribution results
 echo "diff ${OUT} with testprojinfo_out.dist"
 diff -u ${OUT} ${TEST_CLI_DIR}/testprojinfo_out.dist

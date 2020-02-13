@@ -1,8 +1,8 @@
+message(STATUS "Configuring proj library:")
+
 ##############################################
 ### SWITCH BETWEEN STATIC OR SHARED LIBRARY###
 ##############################################
-colormsg(_HIBLUE_ "Configuring proj library:")
-message(STATUS "")
 
 # default config, shared on unix and static on Windows
 if(UNIX)
@@ -64,7 +64,7 @@ if(ENABLE_LTO)
     set(ENABLE_LTO_METHOD "property")
   endif()
 endif()
-boost_report_value(ENABLE_LTO)
+print_variable(ENABLE_LTO)
 
 
 ##############################################
@@ -187,6 +187,7 @@ set(SRC_LIBPROJ_CONVERSIONS
   conversions/geoc.cpp
   conversions/geocent.cpp
   conversions/noop.cpp
+  conversions/set.cpp
   conversions/unitconvert.cpp
 )
 
@@ -198,6 +199,7 @@ set(SRC_LIBPROJ_TRANSFORMATIONS
   transformations/horner.cpp
   transformations/molodensky.cpp
   transformations/vgridshift.cpp
+  transformations/xyzgridshift.cpp
 )
 
 set(SRC_LIBPROJ_ISO19111
@@ -219,8 +221,6 @@ set(SRC_LIBPROJ_CORE
   4D_api.cpp
   aasincos.cpp
   adjlon.cpp
-  apply_gridshift.cpp
-  apply_vgridshift.cpp
   auth.cpp
   ctx.cpp
   datum_set.cpp
@@ -234,13 +234,9 @@ set(SRC_LIBPROJ_CORE
   fileapi.cpp
   fwd.cpp
   gauss.cpp
-  gc_reader.cpp
   geocent.cpp
   geocent.h
   geodesic.c
-  gridcatalog.cpp
-  gridinfo.cpp
-  gridlist.cpp
   init.cpp
   initcache.cpp
   internal.cpp
@@ -251,10 +247,6 @@ set(SRC_LIBPROJ_CORE
   mlfn.cpp
   msfn.cpp
   mutex.cpp
-  nad_cvt.cpp
-  nad_init.cpp
-  nad_intr.cpp
-  open_lib.cpp
   param.cpp
   phi2.cpp
   pipeline.cpp
@@ -285,6 +277,13 @@ set(SRC_LIBPROJ_CORE
   proj_json_streaming_writer.hpp
   proj_json_streaming_writer.cpp
   tracing.cpp
+  grids.hpp
+  grids.cpp
+  filemanager.hpp
+  filemanager.cpp
+  networkfilemanager.cpp
+  sqlite3_utils.hpp
+  sqlite3_utils.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/proj_config.h
 )
 
@@ -332,7 +331,7 @@ set(ALL_LIBPROJ_SOURCES
 set(ALL_LIBPROJ_HEADERS ${HEADERS_LIBPROJ})
 
 # Core targets configuration
-string(TOLOWER "${PROJECT_INTERN_NAME}" PROJECTNAMEL)
+string(TOLOWER "${PROJECT_NAME}" PROJECTNAMEL)
 set(PROJ_CORE_TARGET ${PROJECTNAMEL})
 proj_target_output_name(${PROJ_CORE_TARGET} PROJ_CORE_TARGET_OUTPUT_NAME)
 
@@ -347,6 +346,10 @@ target_compile_options(${PROJ_CORE_TARGET}
   PRIVATE $<$<COMPILE_LANGUAGE:C>:${PROJ_C_WARN_FLAGS}>
   PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${PROJ_CXX_WARN_FLAGS}>
 )
+
+if(MSVC OR MINGW)
+    target_compile_definitions(${PROJ_CORE_TARGET} PRIVATE -DNOMINMAX)
+endif()
 
 # Tell Intel compiler to do arithmetic accurately.  This is needed to stop the
 # compiler from ignoring parentheses in expressions like (a + b) + c and from
@@ -373,29 +376,27 @@ if(ENABLE_LTO)
   endif()
 endif()
 
-if(NOT CMAKE_VERSION VERSION_LESS 2.8.11)
-  target_include_directories(${PROJ_CORE_TARGET} INTERFACE
-    $<INSTALL_INTERFACE:${INCLUDEDIR}>)
-endif()
+target_include_directories(${PROJ_CORE_TARGET} INTERFACE
+  $<INSTALL_INTERFACE:${INCLUDEDIR}>)
 
 if(WIN32)
   set_target_properties(${PROJ_CORE_TARGET}
     PROPERTIES
-    VERSION "${${PROJECT_INTERN_NAME}_BUILD_VERSION}"
+    VERSION "${${PROJECT_NAME}_BUILD_VERSION}"
     OUTPUT_NAME "${PROJ_CORE_TARGET_OUTPUT_NAME}"
     ARCHIVE_OUTPUT_NAME "${PROJ_CORE_TARGET}"
     CLEAN_DIRECT_OUTPUT 1)
 elseif(BUILD_FRAMEWORKS_AND_BUNDLE)
   set_target_properties(${PROJ_CORE_TARGET}
     PROPERTIES
-    VERSION "${${PROJECT_INTERN_NAME}_BUILD_VERSION}"
+    VERSION "${${PROJECT_NAME}_BUILD_VERSION}"
     INSTALL_NAME_DIR ${PROJ_INSTALL_NAME_DIR}
     CLEAN_DIRECT_OUTPUT 1)
 else()
   set_target_properties(${PROJ_CORE_TARGET}
     PROPERTIES
-    VERSION "${${PROJECT_INTERN_NAME}_BUILD_VERSION}"
-    SOVERSION "${${PROJECT_INTERN_NAME}_API_VERSION}"
+    VERSION "${${PROJECT_NAME}_BUILD_VERSION}"
+    SOVERSION "${${PROJECT_NAME}_API_VERSION}"
     CLEAN_DIRECT_OUTPUT 1)
 endif()
 
@@ -414,13 +415,27 @@ if(UNIX)
   if(M_LIB)
     target_link_libraries(${PROJ_CORE_TARGET} -lm)
   endif()
+  find_library(DL_LIB dl)
+  if(M_LIB)
+    target_link_libraries(${PROJ_CORE_TARGET} -ldl)
+  endif()
 endif()
 if(USE_THREAD AND Threads_FOUND AND CMAKE_USE_PTHREADS_INIT)
   target_link_libraries(${PROJ_CORE_TARGET} ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
-include_directories(${SQLITE3_INCLUDE_DIR})
+target_include_directories(${PROJ_CORE_TARGET} PRIVATE ${SQLITE3_INCLUDE_DIR})
 target_link_libraries(${PROJ_CORE_TARGET} ${SQLITE3_LIBRARY})
+
+if(NOT DISABLE_TIFF)
+  target_include_directories(${PROJ_CORE_TARGET} PRIVATE ${TIFF_INCLUDE_DIR})
+  target_link_libraries(${PROJ_CORE_TARGET} ${TIFF_LIBRARY})
+endif()
+
+if(CURL_FOUND)
+  target_include_directories(${PROJ_CORE_TARGET} PRIVATE ${CURL_INCLUDE_DIR})
+  target_link_libraries(${PROJ_CORE_TARGET} ${CURL_LIBRARY})
+endif()
 
 if(MSVC AND BUILD_LIBPROJ_SHARED)
   target_compile_definitions(${PROJ_CORE_TARGET}
@@ -445,7 +460,7 @@ endif()
 ##############################################
 # Core configuration summary
 ##############################################
-boost_report_value(PROJ_CORE_TARGET)
-boost_report_value(PROJ_CORE_TARGET_OUTPUT_NAME)
-boost_report_value(PROJ_LIBRARY_TYPE)
-boost_report_value(PROJ_LIBRARIES)
+print_variable(PROJ_CORE_TARGET)
+print_variable(PROJ_CORE_TARGET_OUTPUT_NAME)
+print_variable(PROJ_LIBRARY_TYPE)
+print_variable(PROJ_LIBRARIES)

@@ -493,18 +493,14 @@ TEST(wkt_parse, wkt1_geographic_old_datum_name_from_EPSG_code) {
 
 // ---------------------------------------------------------------------------
 
-TEST(wkt_parse, wkt1_geographic_old_datum_name_witout_EPSG_code) {
+TEST(wkt_parse, wkt1_geographic_old_datum_name_without_EPSG_code) {
     auto wkt =
         "GEOGCS[\"S-JTSK (Ferro)\",\n"
         "    "
         "DATUM[\"System_Jednotne_Trigonometricke_Site_Katastralni_Ferro\",\n"
-        "        SPHEROID[\"Bessel 1841\",6377397.155,299.1528128,\n"
-        "            AUTHORITY[\"EPSG\",\"7004\"]]],\n"
-        "    PRIMEM[\"Ferro\",-17.66666666666667,\n"
-        "       AUTHORITY[\"EPSG\",\"8909\"]],\n"
-        "    UNIT[\"degree\",0.0174532925199433,\n"
-        "        AUTHORITY[\"EPSG\",\"9122\"]],\n"
-        "    AUTHORITY[\"EPSG\",\"4818\"]]";
+        "        SPHEROID[\"Bessel 1841\",6377397.155,299.1528128]],\n"
+        "    PRIMEM[\"Ferro\",-17.66666666666667],\n"
+        "    UNIT[\"degree\",0.0174532925199433]]";
     auto obj = WKTParser()
                    .attachDatabaseContext(DatabaseContext::create())
                    .createFromWKT(wkt);
@@ -7966,6 +7962,24 @@ TEST(io, projparse_cea_ellipsoidal) {
     EXPECT_TRUE(
         wkt.find(
             "METHOD[\"Lambert Cylindrical Equal Area\",ID[\"EPSG\",9835]]") !=
+        std::string::npos)
+        << wkt;
+}
+
+// ---------------------------------------------------------------------------
+
+TEST(io, projparse_cea_ellipsoidal_with_k_0) {
+    auto obj = PROJStringParser().createFromPROJString(
+        "+proj=cea +ellps=GRS80 +k_0=0.99 +type=crs");
+    auto crs = nn_dynamic_pointer_cast<ProjectedCRS>(obj);
+    ASSERT_TRUE(crs != nullptr);
+    WKTFormatterNNPtr f(WKTFormatter::create());
+    f->simulCurNodeHasId();
+    f->setMultiLine(false);
+    crs->exportToWKT(f.get());
+    auto wkt = f->toString();
+    EXPECT_TRUE(
+        wkt.find("PARAMETER[\"Latitude of 1st standard parallel\",8.1365") !=
         std::string::npos)
         << wkt;
 }

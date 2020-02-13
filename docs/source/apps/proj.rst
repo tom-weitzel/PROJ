@@ -97,10 +97,6 @@ The following control parameters can appear in any order
 
     List of all distance units that can be selected with the *+units* parameter.
 
-.. option:: -ld
-
-    List of datums that can be selected with the *+datum* parameter.
-
 .. option:: -r
 
     This options reverses the order of the expected input from
@@ -218,7 +214,7 @@ data will appear as three lines of::
     See also
     ********
 
-    **cs2cs(1)**, **cct(1)**, **geod(1)**, **gie(1)**, **projinfo(1)**
+    **cs2cs(1)**, **cct(1)**, **geod(1)**, **gie(1)**, **projinfo(1)**, **projsync(1)**
 
     Bugs
     ****

@@ -346,6 +346,13 @@ man_pages = [
         ['Even Rouault'],
         1
     ),
+    (
+        'apps/projsync',
+        'projsync',
+        u'Downloading tool of resource files',
+        ['Even Rouault'],
+        1
+    ),
 ]
 
 # If true, show URL addresses after external links.
@@ -376,7 +383,7 @@ texinfo_documents = [
 #texinfo_no_detailmenu = False
 
 breathe_projects = {
-    "cpp_stuff":"../build/xml/",
+    "doxygen_api":"../build/xml/",
 }
 
 import redirects

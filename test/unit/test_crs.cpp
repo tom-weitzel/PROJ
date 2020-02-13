@@ -756,7 +756,9 @@ TEST(crs, EPSG_27561_projected_with_geodetic_in_grad_as_PROJ_string_and_WKT1) {
         nn_crs->DerivedCRS::isEquivalentTo(createUnrelatedObject().get()));
 
     auto wkt1 = crs->exportToWKT(
-        WKTFormatter::create(WKTFormatter::Convention::WKT1_GDAL).get());
+        WKTFormatter::create(WKTFormatter::Convention::WKT1_GDAL,
+                             DatabaseContext::create())
+            .get());
     EXPECT_EQ(
         wkt1,
         "PROJCS[\"NTF (Paris) / Lambert Nord France\",\n"
@@ -857,7 +859,9 @@ TEST(crs, EPSG_2222_projected_unit_foot_as_PROJ_string_and_WKT1) {
               "+x_0=213360 +y_0=0 +datum=NAD83 +units=ft +no_defs +type=crs");
 
     auto wkt1 = crs->exportToWKT(
-        WKTFormatter::create(WKTFormatter::Convention::WKT1_GDAL).get());
+        WKTFormatter::create(WKTFormatter::Convention::WKT1_GDAL,
+                             DatabaseContext::create())
+            .get());
     EXPECT_EQ(wkt1,
               "PROJCS[\"NAD83 / Arizona East (ft)\",\n"
               "    GEOGCS[\"NAD83\",\n"
@@ -904,11 +908,13 @@ TEST(crs, projected_with_parameter_unit_different_than_cs_unit_as_WKT1) {
     ASSERT_TRUE(crs != nullptr);
 
     auto wkt1 = crs->exportToWKT(
-        WKTFormatter::create(WKTFormatter::Convention::WKT1_GDAL).get());
+        WKTFormatter::create(WKTFormatter::Convention::WKT1_GDAL,
+                             DatabaseContext::create())
+            .get());
     EXPECT_EQ(wkt1,
               "PROJCS[\"unknown\",\n"
               "    GEOGCS[\"unknown\",\n"
-              "        DATUM[\"Unknown_based_on_GRS80_ellipsoid\",\n"
+              "        DATUM[\"Unknown based on GRS80 ellipsoid\",\n"
               "            SPHEROID[\"GRS 1980\",6378137,298.257222101]],\n"
               "        PRIMEM[\"Greenwich\",0],\n"
               "        UNIT[\"degree\",0.0174532925199433,\n"
@@ -1315,6 +1321,7 @@ TEST(crs, geodeticcrs_identify_no_db) {
 TEST(crs, geodeticcrs_identify_db) {
     auto dbContext = DatabaseContext::create();
     auto factory = AuthorityFactory::create(dbContext, "EPSG");
+
     {
         // No match
         auto res =
@@ -1620,6 +1627,26 @@ TEST(crs, geodeticcrs_identify_db) {
                                          dbContext));
         EXPECT_TRUE(res.front().first->_isEquivalentTo(
             crs.get(), IComparable::Criterion::EQUIVALENT, dbContext));
+    }
+
+    {
+        // Identify "a" ESRI WKT representation of GDA2020. See #1911
+        auto wkt = "GEOGCS[\"GDA2020\",DATUM[\"D_GDA2020\","
+                   "SPHEROID[\"GRS_1980\",6378137.0,298.257222101]],"
+                   "PRIMEM[\"Greenwich\",0.0],"
+                   "UNIT[\"Degree\",0.017453292519943295]]";
+        auto obj =
+            WKTParser().attachDatabaseContext(dbContext).createFromWKT(wkt);
+        auto crs = nn_dynamic_pointer_cast<GeographicCRS>(obj);
+        ASSERT_TRUE(crs != nullptr);
+
+        auto allFactory = AuthorityFactory::create(dbContext, std::string());
+        auto res = crs->identify(allFactory);
+        ASSERT_EQ(res.size(), 1U);
+        ASSERT_TRUE(!res.front().first->identifiers().empty());
+        EXPECT_EQ(*res.front().first->identifiers()[0]->codeSpace(), "EPSG");
+        EXPECT_EQ(res.front().first->identifiers()[0]->code(), "7844");
+        EXPECT_EQ(res.front().second, 100);
     }
 }
 
@@ -2386,6 +2413,37 @@ TEST(crs, projectedCRS_identify_db) {
         EXPECT_EQ(res.size(), 1U);
         EXPECT_EQ(res.front().first->getEPSGCode(), 6646);
         EXPECT_EQ(res.front().second, 70);
+    }
+    {
+        // Identify from a WKT ESRI that has the same name has ESRI:102039
+        // but uses us-ft instead of metres!
+        auto obj = WKTParser().attachDatabaseContext(dbContext).createFromWKT(
+            "PROJCS[\"USA_Contiguous_Albers_Equal_Area_Conic_USGS_version\","
+            "GEOGCS[\"GCS_North_American_1983\","
+            "DATUM[\"D_North_American_1983\",SPHEROID[\"GRS_1980\","
+            "6378137.0,298.257222101]],PRIMEM[\"Greenwich\",0.0],"
+            "UNIT[\"Degree\",0.0174532925199433]],PROJECTION[\"Albers\"],"
+            "PARAMETER[\"False_Easting\",0.0],"
+            "PARAMETER[\"False_Northing\",0.0],"
+            "PARAMETER[\"Central_Meridian\",-96.0],"
+            "PARAMETER[\"Standard_Parallel_1\",29.5],"
+            "PARAMETER[\"Standard_Parallel_2\",45.5],"
+            "PARAMETER[\"Latitude_Of_Origin\",23.0],"
+            "UNIT[\"Foot_US\",0.3048006096012192]]");
+        auto crs = nn_dynamic_pointer_cast<ProjectedCRS>(obj);
+        ASSERT_TRUE(crs != nullptr);
+        auto factoryAll = AuthorityFactory::create(dbContext, std::string());
+        auto res = crs->identify(factoryAll);
+        EXPECT_GE(res.size(), 1U);
+        bool found = false;
+        for (const auto &pair : res) {
+            if (pair.first->identifiers()[0]->code() == "102039") {
+                found = true;
+                EXPECT_EQ(pair.second, 25);
+                break;
+            }
+        }
+        EXPECT_TRUE(found);
     }
 }
 
@@ -3492,6 +3550,17 @@ TEST(crs, compoundCRS_identify_db) {
         ASSERT_EQ(res.size(), 1U);
         EXPECT_EQ(res.front().first->getEPSGCode(), 8769);
         EXPECT_EQ(res.front().second, 70);
+    }
+    {
+        auto obj = PROJStringParser().createFromPROJString(
+            "+proj=tmerc +lat_0=0 +lon_0=72.05 +k=1 +x_0=3500000 "
+            "+y_0=-5811057.63 +ellps=krass "
+            "+towgs84=23.57,-140.95,-79.8,0,-0.35,-0.79,-0.22 "
+            "+geoidgrids=egm08_25.gtx +units=m +no_defs +type=crs");
+        auto crs = nn_dynamic_pointer_cast<CompoundCRS>(obj);
+        ASSERT_TRUE(crs != nullptr);
+        // Just check we don't get an exception
+        crs->identify(factory);
     }
 }
 
@@ -5148,6 +5217,18 @@ TEST(crs, crs_createBoundCRSToWGS84IfPossible) {
         auto bound = crs->createBoundCRSToWGS84IfPossible(
             dbContext, CoordinateOperationContext::IntermediateCRSUse::NEVER);
         EXPECT_EQ(bound, crs);
+    }
+    {
+        // GDA2020 geocentric
+        auto crs = factory->createCoordinateReferenceSystem("7842");
+        const auto time_before =
+            ::testing::UnitTest::GetInstance()->elapsed_time();
+        crs->createBoundCRSToWGS84IfPossible(
+            dbContext, CoordinateOperationContext::IntermediateCRSUse::
+                           IF_NO_DIRECT_TRANSFORMATION);
+        const auto time_after =
+            ::testing::UnitTest::GetInstance()->elapsed_time();
+        EXPECT_LE(time_after - time_before, 500);
     }
 }
 

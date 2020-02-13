@@ -1,5 +1,26 @@
 -- This file is hand generated.
 
+-- grid_alternatives entries created from existing ones
+
+INSERT INTO grid_alternatives(original_grid_name,
+                              proj_grid_name,
+                              old_proj_grid_name,
+                              proj_grid_format,
+                              proj_method,
+                              inverse_direction,
+                              package_name,
+                              url, direct_download, open_license, directory)
+    SELECT grid_name,
+           'au_ga_AUSGeoid98.tif',
+           'AUSGeoid98.gtx',
+           'GTiff',
+           'geoid_like',
+           0,
+           NULL,
+           'https://cdn.proj.org/au_ga_AUSGeoid98.tif', 1, 1, NULL FROM grid_transformation WHERE
+                grid_name LIKE '%DAT.htm' AND name LIKE 'GDA94 to AHD height%';
+
+
 INSERT INTO "geodetic_crs" VALUES('OGC','CRS84','WGS 84 (CRS84)',NULL,NULL,'geographic 2D','EPSG','6424','EPSG','6326','EPSG','1262',NULL,0);
 
 INSERT INTO "other_transformation" VALUES('PROJ','CRS84_TO_EPSG_4326','OGC:CRS84 to WGS 84',NULL,NULL,'EPSG','9843','Axis Order Reversal (2D)','OGC','CRS84','EPSG','4326','EPSG','1262',0.0,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0);
@@ -101,3 +122,25 @@ INSERT INTO "geoid_model" SELECT 'GEOID12A', auth_name, code FROM grid_transform
 INSERT INTO "geoid_model" SELECT 'GEOID12B', auth_name, code FROM grid_transformation WHERE auth_name = 'EPSG' AND grid_name LIKE 'g2012b%' AND deprecated = 0;
 
 INSERT INTO "geoid_model" SELECT 'GEOID18', auth_name, code FROM grid_transformation WHERE auth_name = 'EPSG' AND grid_name LIKE 'g2018%' AND deprecated = 0;
+
+---- PROJ historic +datum aliases -----
+
+INSERT INTO "alias_name" VALUES('geodetic_datum','EPSG','6326','WGS84','PROJ');
+INSERT INTO "alias_name" VALUES('geodetic_datum','EPSG','6121','GGRS87','PROJ');
+INSERT INTO "alias_name" VALUES('geodetic_datum','EPSG','6269','NAD83','PROJ');
+INSERT INTO "alias_name" VALUES('geodetic_datum','EPSG','6267','NAD27','PROJ');
+INSERT INTO "alias_name" VALUES('geodetic_datum','EPSG','6314','potsdam','PROJ');
+INSERT INTO "alias_name" VALUES('geodetic_datum','EPSG','6223','carthage','PROJ');
+INSERT INTO "alias_name" VALUES('geodetic_datum','EPSG','6312','hermannskogel','PROJ');
+INSERT INTO "alias_name" VALUES('geodetic_datum','EPSG','6299','ire65','PROJ');
+INSERT INTO "alias_name" VALUES('geodetic_datum','EPSG','6272','nzgd49','PROJ');
+INSERT INTO "alias_name" VALUES('geodetic_datum','EPSG','6277','OSGB36','PROJ');
+
+---- NTF_PARIS_TO_RGF93_GEOCENTRIC_TRANSLATION -----
+
+-- This is a copy of EPSG:7810 (NTF (Paris) to RGF93 (1)) which uses the deprecated EPSG:1053 operation as the second step.
+-- We replace it by the non-deprecated EPSG:9327
+-- Issue raised to EPSG
+INSERT INTO "concatenated_operation" VALUES('PROJ','NTF_PARIS_TO_RGF93_GEOCENTRIC_TRANSLATION','NTF (Paris) to RGF93 (1)','See transformation code 7811 for an alternative which uses the NTv2 method as an emulation of the geocentric interpolation in the second step.','Approximation to better than 1m of transformation of coordinates referenced to NTF (Paris) to RGF93.','EPSG','4807','EPSG','4171','EPSG','3694',NULL,'',0);
+INSERT INTO "concatenated_operation_step" VALUES('PROJ','NTF_PARIS_TO_RGF93_GEOCENTRIC_TRANSLATION',1,'EPSG','1763');
+INSERT INTO "concatenated_operation_step" VALUES('PROJ','NTF_PARIS_TO_RGF93_GEOCENTRIC_TRANSLATION',2,'EPSG','9327');
